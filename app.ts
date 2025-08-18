@@ -1,0 +1,61 @@
+import express from 'express';
+import dotenv from 'dotenv';
+import path from 'node:path';
+import helmet from 'helmet';
+import cors from 'cors';
+
+import { prisma } from './infrastructure/prisma/client.js';
+import { PrismaTaskRepository } from './infrastructure/prisma/PrismaTaskRepository.js';
+import { PrismaUserRepository } from './infrastructure/prisma/PrismaUserRepository.js';
+import { BcryptPasswordHasher } from './infrastructure/security/BcryptPasswordHasher.js';
+import { JwtTokenService } from './infrastructure/security/JwtTokenService.js';
+
+import { ListTasks } from './application/tasks/ListTasks.js';
+import { GetTask, CreateTask, UpdateTask, DeleteTask } from './application/tasks/CrudTasks.js';
+import { UploadAttachment } from './application/tasks/UploadAttachment.js';
+import { RegisterUser } from './application/auth/RegisterUser.js';
+import { LoginUser } from './application/auth/LoginUser.js';
+import { PromoteUser } from './application/auth/PromoteUser.js';
+
+import { TaskController } from './interface/http/TaskController.js';
+import { AuthController } from './interface/http/AuthController.js';
+import { bindTaskRoutes } from './interface/http/routes/cleanTodos.js';
+import { bindAuthRoutes } from './interface/http/routes/cleanAuth.js';
+
+dotenv.config();
+
+const app = express();
+app.use(express.json());
+app.use(helmet());
+app.use(cors());
+
+app.use('/uploads', express.static(path.resolve(process.cwd(), 'uploads')));
+
+const taskRepo = new PrismaTaskRepository(prisma);
+const userRepo = new PrismaUserRepository(prisma);
+const hasher = new BcryptPasswordHasher(10);
+const tokens = new JwtTokenService(process.env.JWT_SECRET || 'dev-secret');
+
+const listTasks = new ListTasks(taskRepo);
+const getTask = new GetTask(taskRepo);
+const createTask = new CreateTask(taskRepo);
+const updateTask = new UpdateTask(taskRepo);
+const deleteTask = new DeleteTask(taskRepo);
+const uploadAttachment = new UploadAttachment(taskRepo);
+
+const registerUser = new RegisterUser(userRepo, hasher);
+const loginUser = new LoginUser(userRepo, hasher, tokens);
+const promoteUser = new PromoteUser(userRepo);
+
+const taskController = new TaskController(listTasks, getTask, createTask, updateTask, deleteTask, uploadAttachment);
+const authController = new AuthController(registerUser, loginUser, promoteUser);
+
+app.use('/auth', bindAuthRoutes(authController));
+app.use('/todos', bindTaskRoutes(taskController));
+
+app.use((err: any, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
+  console.error(err);
+  res.status(500).json({ error: 'Internal Server Error' });
+});
+
+export default app;

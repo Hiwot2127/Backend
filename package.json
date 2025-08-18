@@ -1,0 +1,43 @@
+{
+  "name": "backend",
+  "version": "1.0.0",
+  "description": "",
+  "main": "dist/server.js",
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/server.js",
+    "dev": "nodemon --watch ./ --exec \"node --enable-source-maps dist/server.js\"",
+    "prestart": "npm run build",
+    "test": "vitest run --reporter=verbose",
+    "test:watch": "vitest",
+    "test:e2e": "cross-env NODE_ENV=test vitest run --reporter=verbose"
+  },
+  "type": "module",
+  "devDependencies": {
+    "@types/bcrypt": "^6.0.0",
+    "@types/cors": "^2.8.19",
+    "@types/express": "^5.0.3",
+    "@types/jsonwebtoken": "^9.0.10",
+    "@types/multer": "^2.0.0",
+    "@types/node": "^24.1.0",
+    "@types/pg": "^8.15.5",
+    "@types/uuid": "^10.0.0",
+    "prisma": "^6.13.0",
+    "supertest": "^7.0.0",
+    "vitest": "^2.0.0",
+    "cross-env": "^7.0.3"
+  },
+  "dependencies": {
+    "@prisma/client": "^6.13.0",
+    "bcrypt": "^6.0.0",
+    "cors": "^2.8.5",
+    "dotenv": "^17.2.1",
+    "express": "^5.1.0",
+    "express-rate-limit": "^8.0.1",
+    "helmet": "^8.1.0",
+    "jsonwebtoken": "^9.0.2",
+    "multer": "^2.0.2",
+    "pg": "^8.16.3",
+    "uuid": "^11.1.0"
+  }
+}
