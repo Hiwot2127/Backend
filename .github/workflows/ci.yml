@@ -20,14 +20,16 @@ jobs:
         ports:
           - 5432:5432
         options: >-
-          --health-cmd pg_isready
+          --health-cmd "pg_isready -d $POSTGRES_DB -U $POSTGRES_USER"
           --health-interval 10s
           --health-timeout 5s
-          --health-retries 10
+          --health-retries 20
+          --health-start-period 10s
 
     env:
       NODE_ENV: test
-      DATABASE_URL: postgresql://testuser:testpass@postgres:5432/testdb
+      # Use localhost to hit the published port from the runner
+      DATABASE_URL: postgresql://testuser:testpass@localhost:5432/testdb
       JWT_SECRET: github-actions-secret
 
     steps:
@@ -46,15 +48,18 @@ jobs:
       - name: Ensure uploads dir
         run: mkdir -p uploads
 
-      - name: Install Postgres client (for pg_isready)
+      - name: Install Postgres client (pg_isready/psql)
         run: sudo apt-get update && sudo apt-get install -y postgresql-client
 
       - name: Wait for Postgres
+        shell: bash
         run: |
           for i in {1..60}; do
-            pg_isready -h postgres -p 5432 -U testuser && break
+            pg_isready -h localhost -p 5432 -d testdb -U testuser && break
             echo "Waiting for Postgres... ($i)"; sleep 1
           done
+          # small grace period to ensure accepts connections
+          sleep 2
 
       - name: Create .env for app
         run: |
@@ -68,8 +73,15 @@ jobs:
       - name: Prisma generate
         run: npx prisma generate
 
-      - name: Prisma migrate (deploy)
-        run: npx prisma migrate deploy
+      - name: Prisma migrate (deploy) with retry
+        shell: bash
+        run: |
+          for i in {1..5}; do
+            npx prisma migrate deploy && break || {
+              echo "migrate deploy attempt $i failed; retrying in 3s..."
+              sleep 3
+            }
+          done
 
       - name: Run tests with coverage
         run: npx vitest run --coverage --reporter=verbose
