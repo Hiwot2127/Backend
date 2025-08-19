@@ -16,7 +16,7 @@ jobs:
         env:
           POSTGRES_USER: testuser
           POSTGRES_PASSWORD: testpass
-          POSTGRES_DB: testdb   
+          POSTGRES_DB: testdb
         ports:
           - 5432:5432
         options: >-
@@ -27,7 +27,7 @@ jobs:
 
     env:
       NODE_ENV: test
-      DATABASE_URL: postgres://testuser:testpass@localhost:5432/testdb
+      DATABASE_URL: postgresql://testuser:testpass@postgres:5432/testdb
       JWT_SECRET: github-actions-secret
 
     steps:
@@ -46,12 +46,13 @@ jobs:
       - name: Ensure uploads dir
         run: mkdir -p uploads
 
+      - name: Install Postgres client (for pg_isready)
+        run: sudo apt-get update && sudo apt-get install -y postgresql-client
+
       - name: Wait for Postgres
-        shell: bash
         run: |
           for i in {1..60}; do
-            node -e "require('net').connect(5432,'localhost').on('connect', s=>{s.end();process.exit(0)}).on('error', ()=>process.exit(1));"
-            if [ $? -eq 0 ]; then echo 'Postgres is up'; break; fi
+            pg_isready -h postgres -p 5432 -U testuser && break
             echo "Waiting for Postgres... ($i)"; sleep 1
           done
 
@@ -60,6 +61,9 @@ jobs:
           echo "DATABASE_URL=${DATABASE_URL}" > .env
           echo "JWT_SECRET=${JWT_SECRET}" >> .env
           echo "NODE_ENV=${NODE_ENV}" >> .env
+
+      - name: Prisma version
+        run: npx prisma --version
 
       - name: Prisma generate
         run: npx prisma generate
@@ -70,10 +74,10 @@ jobs:
       - name: Run tests with coverage
         run: npx vitest run --coverage --reporter=verbose
 
-      - name: Build (for artifact/CD)
+      - name: Build
         run: npm run build
 
-      - name: Upload dist artifact (optional CD)
+      - name: Upload dist artifact
         uses: actions/upload-artifact@v4
         with:
           name: dist
