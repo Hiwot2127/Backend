@@ -28,7 +28,6 @@ jobs:
 
     env:
       NODE_ENV: test
-      # Use localhost to hit the published port from the runner
       DATABASE_URL: postgresql://testuser:testpass@localhost:5432/testdb
       JWT_SECRET: github-actions-secret
 

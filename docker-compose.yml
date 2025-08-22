@@ -1,0 +1,27 @@
+services:
+  db:
+    image: postgres:latest
+    environment:
+      POSTGRES_USER: devuser
+      POSTGRES_PASSWORD: devpass
+      POSTGRES_DB: devdb
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+  app:
+    build: .
+    depends_on:
+      - db
+    environment:
+      DATABASE_URL: postgresql://devuser:devpass@db:5432/devdb
+      JWT_SECRET: dev-secret
+      NODE_ENV: development
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./uploads:/app/uploads
+
+volumes:
+  pgdata:
