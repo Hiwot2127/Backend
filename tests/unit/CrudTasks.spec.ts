@@ -3,6 +3,8 @@ import { CreateTask, GetTask, UpdateTask, DeleteTask } from '../../application/t
 
 function makeMockRepo(overrides: Partial<any> = {}) {
   return {
+    list: vi.fn(),
+    count: vi.fn(),
     findById: vi.fn(),
     create: vi.fn(),
     update: vi.fn(),
